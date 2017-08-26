@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+
+<html>
+
+	<head>
+		<meta charset="utf-8" />
+		<meta name="format-detection" content="telephone=no" />
+		<meta name="msapplication-tap-highlight" content="no" />
+		<meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width" />
+		<meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline'; style-src 'self' 'unsafe-inline'; media-src *" />
+
+		<!--<link rel="stylesheet" type="text/css" href="css/index.css" />-->
+		<style>
+			.box {
+				width: 100px;
+				height: 100px;
+				margin: 20px auto;
+				background: #ccc;
+			}
+			
+			#v1 {
+				width: 200px;
+				height: 150px;
+			}
+		</style>
+		<title>Hello World</title>
+	</head>
+
+	<body>
+		<div class="app">
+
+			<input type="button" value="拍照" id="btn1">
+			<div id="picture" style="width:100px;
+      	height:100px;border:1px solid #ccc;"></div>
+			<input type="button" value="录像" id="btn2">
+			<br />
+			<video src="" id="v1"></video>
+			<br />
+			<input type="button" value="获取一次朝向" id="btn3">
+			<input type="button" value="实时获取" id="btn4">
+			<input type="button" value="关闭实时获取" id="btn5">
+			<div id="div1">34.3434</div>
+			<img width="100" src="https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1503549926628&di=e50b6809c1462a5a818c4dff5934d98d&imgtype=0&src=http%3A%2F%2Fimg2.web07.cn%2FUpPic%2FPng%2F201411%2F08%2F3130890812365633.png" alt="" id="img1">
+
+			<input type="button" id="btn6" value="获取地理位置" />
+			<p id="geolocation">Finding geolocation...</p>
+			<input type="button" id="btn7" value="开始录音" />
+			<div id="audio"></div>
+			
+		</div>
+		<script type="text/javascript" src="cordova.js"></script>
+		<script>
+			function rnd(n, m) {
+				return parseInt(n + Math.random() * (m - n))
+			}
+			document.addEventListener('DOMContentLoaded', function() {
+
+				var oBtn1 = document.querySelector('#btn1');
+				oBtn1.onclick = function() {
+					navigator.camera.getPicture(function(imageData) {
+						var oImg = new Image();
+						oImg.src = "data:image/jpeg;base64," + imageData;
+						oImg.width = 100;
+						oImg.height = 100;
+						var oPic = document.getElementById('picture')
+						oPic.appendChild(oImg);
+					}, function(message) {
+						alert(message);
+					}, {
+						quality: 80, //压缩比
+						destinationType: 0, // 0 base64图 1: URI 2:本地
+						allowEdit: true, //是否允许编辑
+						encodingType: 0, // base64 格式 0 jpeg  1 png
+						targetWidth: 100 // 图像尺寸
+					});
+				};
+
+				var oBtn2 = document.querySelector('#btn2');
+				var oV1 = document.querySelector('#v1');
+				oBtn2.onclick = function() {
+					navigator.device.capture.captureVideo(
+						function(mediaFiles) {
+							// mediaFiles == array 所有采集到的视频
+							//mediaFiles[i].fullPath  地址
+							oV1.src = mediaFiles[0].fullPath;
+							oV1.play();
+						},
+						function(error) {
+							alert(error.code);
+						}, {
+							limit: 1, //单个采集操作期间能够采集的视频剪辑数量最大值
+							duration: 5, //录像时长
+						}
+					);
+				};
+
+				var oImg = document.querySelector('#img1');
+				var oDiv = document.querySelector('#div1');
+				var oBtn3 = document.querySelector('#btn3');
+				oBtn3.onclick = function() {
+					navigator.compass.getCurrentHeading(function(heading) {
+						oDiv.innerHTML = heading.magneticHeading; //角度  0-365.99
+					}, function(error) {
+						alert(error.code);
+					}, {
+						frequency: 100, //多少毫秒获取一次罗盘朝向
+					});
+				};
+
+				var oBtn4 = document.querySelector('#btn4');
+				var watchID = null;
+				oBtn4.onclick = function() {
+					watchID = navigator.compass.watchHeading(function(heading) {
+						oDiv.innerHTML = 'rotate(' + parseInt(heading.magneticHeading) + 'deg)'; //角度  0-365.99
+						oImg.style.webkitTransform = 'rotate(' + parseInt(heading.magneticHeading) + 'deg)'
+					}, function(error) {
+						alert(error.code);
+					}, {
+						frequency: 100, //多少毫秒获取一次罗盘朝向
+					});
+				};
+
+				var oBtn5 = document.querySelector('#btn5');
+				oBtn5.onclick = function() {
+					navigator.compass.clearWatch(watchID);
+				};
+
+				var oBtn6 = document.querySelector('#btn6');
+				oBtn6.onclick = function() {
+					var onSuccess = function(position) {
+						var element = document.getElementById('geolocation');
+						element.innerHTML = 'Latitude: ' + position.coords.latitude + '\n' +
+							'Longitude: ' + position.coords.longitude + '\n' +
+							'Altitude: ' + position.coords.altitude + '\n' +
+							'Accuracy: ' + position.coords.accuracy + '\n' +
+							'Altitude Accuracy: ' + position.coords.altitudeAccuracy + '\n' +
+							'Heading: ' + position.coords.heading + '\n' +
+							'Speed: ' + position.coords.speed + '\n' +
+							'Timestamp: ' + new Date(position.timestamp) + '\n';
+					};
+
+					// onError回调函数接收一个PositionError对象
+					function onError(error) {
+						alert('code: ' + error.code + '\n' +
+							'message: ' + error.message + '\n');
+					}
+
+					navigator.geolocation.getCurrentPosition(onSuccess, onError);
+				};
+
+				// 录音
+				// 采集操作成功完成后的回调函数
+	function captureSuccess(mediaFiles) { 
+		var i, len; 
+		for (i = 0, len = mediaFiles.length; i < len; i += 1) {
+			uploadFile(mediaFiles[i]); 
+		} 
+	} 
+	
+	// 采集操作出错后的回调函数
+	function captureError(error) { 
+		var msg = 'An error occurred during capture: ' + error.code;
+		navigator.notification.alert(msg, null, 'Uh oh!'); 
+	} 
+	
+	// “Capture Audio”按钮点击事件触发函数
+	function captureAudio() { 
+	
+		// 启动设备的音频录制应用程序,  
+		// 允许用户最多采集2个音频剪辑
+		navigator.device.capture.captureAudio(captureSuccess, captureError, {limit: 2});
+	} 
+	 
+	// 上传文件到服务器 
+	function uploadFile(mediaFile) {
+		var ft = new FileTransfer(), 
+		path = mediaFile.fullPath, 
+		name = mediaFile.name; 
+		ft.upload(path,
+				"http://my.domain.com/upload.php",
+				function(result) { 
+					console.log('Upload success: ' + result.responseCode); 
+					console.log(result.bytesSent + ' bytes sent'); 
+				}, 
+				function(error) { 
+					console.log('Error uploading file ' + path + ': ' + error.code); 
+				}, 
+				{ fileName: name });  
+	}  
+				var oBtn7 = document.querySelector('#btn7');
+				var cont = 0;
+//				var capture = navigator.device.capture;
+				oBtn7.onclick = function() {
+					captureAudio();
+				}
+
+			}, false);
+		</script>
+	</body>
+
+</html>
